@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environments and secrets
+.env
+.venv/
+venv/
+env/
+
+# Runtime logs
+*.log
+
+# Uploaded source documents and generated ingestion stores
+app/data/
+app/dataframes/
+app/keyword_index/
+app/metadata/
+app/raw_files/
+app/structured/
+app/tables/
+app/vectordb/
+
+# Generated reports and QA artifacts
+progress report/
+frontend-*.png
+
+# Editors and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

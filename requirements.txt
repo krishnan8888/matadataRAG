@@ -1,0 +1,11 @@
+chromadb
+fastapi
+langchain-community
+langchain-core
+langchain-text-splitters
+openpyxl
+PyMuPDF
+python-docx
+python-multipart
+sentence-transformers
+uvicorn[standard]

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HCL Knowledge Workspace</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">Metadata-first RAG</p>
+      <h1>Knowledge workspace</h1>
+    </div>
+    <div class="health" id="health" aria-live="polite">
+      <span class="status-dot"></span>
+      <span>Connecting</span>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <aside class="sidebar">
+      <section class="upload-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Ingestion</p>
+            <h2>Add documents</h2>
+          </div>
+        </div>
+
+        <label class="drop-zone" id="drop-zone" for="file-input">
+          <input id="file-input" type="file" multiple>
+          <strong>Choose files</strong>
+          <span>or drop them here</span>
+          <small>PDF, DOCX, XLSX, CSV, text and code files</small>
+        </label>
+
+        <div class="upload-list" id="upload-list" aria-live="polite"></div>
+      </section>
+
+      <section class="documents-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Library</p>
+            <h2>Documents</h2>
+          </div>
+          <button class="icon-button" id="refresh-documents" type="button" title="Refresh documents" aria-label="Refresh documents">↻</button>
+        </div>
+        <div class="document-list" id="document-list" aria-live="polite"></div>
+      </section>
+    </aside>
+
+    <section class="query-workspace">
+      <div class="query-header">
+        <p class="eyebrow">Ask your documents</p>
+        <h2>Retrieval and grounded answer</h2>
+      </div>
+
+      <form class="query-form" id="query-form">
+        <label for="query-input">Question</label>
+        <div class="query-row">
+          <textarea id="query-input" rows="3" placeholder="What changed in Project Nebula?" required></textarea>
+          <button class="primary-button" id="ask-button" type="submit">Ask</button>
+        </div>
+      </form>
+
+      <div class="answer-state empty" id="answer-state">
+        <p>Ask a question to see the grounded answer and retrieved evidence.</p>
+      </div>
+
+      <section class="answer-section hidden" id="answer-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Answer</p>
+            <h2 id="answer-title">Response</h2>
+          </div>
+        </div>
+        <div class="answer-text" id="answer-text"></div>
+      </section>
+
+      <section class="evidence-section hidden" id="evidence-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Evidence</p>
+            <h2>Retrieved context</h2>
+          </div>
+          <button class="text-button" id="toggle-evidence" type="button">Hide evidence</button>
+        </div>
+        <div class="chosen-documents" id="chosen-documents"></div>
+        <div class="evidence-list" id="evidence-list"></div>
+      </section>
+    </section>
+  </main>
+
+  <script src="/static/app.js" defer></script>
+</body>
+</html>
