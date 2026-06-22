@@ -1,8 +1,8 @@
 import json
 import re
 
-from langchain_community.chat_models import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_ollama import ChatOllama
 
 from app.settings import METADATA_MODEL, OLLAMA_BASE_URL
 

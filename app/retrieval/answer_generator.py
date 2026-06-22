@@ -1,5 +1,5 @@
-from langchain_community.chat_models import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_ollama import ChatOllama
 
 from app.settings import ANSWER_MODEL, OLLAMA_BASE_URL
 

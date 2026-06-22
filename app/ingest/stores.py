@@ -1,5 +1,6 @@
 import csv
 import json
+import re
 import shutil
 from pathlib import Path
 
@@ -93,8 +94,39 @@ def read_xlsx_sheets(file_path: Path) -> list[dict]:
 def extract_docx_tables(file_path: Path) -> list[dict]:
     document = Document(file_path)
     tables = []
+    current_document_section = ""
+    current_project = ""
+    current_section = ""
+    table_index = 0
 
-    for table_index, table in enumerate(document.tables):
+    for block in document.iter_inner_content():
+        if not hasattr(block, "rows"):
+            text = block.text.strip()
+
+            if not text:
+                continue
+
+            if (
+                text.startswith("Statement of Work")
+                or text.startswith("Change Order")
+            ):
+                current_document_section = text
+
+            project_match = re.search(
+                r'Project\s+"?([A-Za-z0-9_-]+)',
+                text,
+                flags=re.IGNORECASE,
+            )
+
+            if project_match:
+                current_project = project_match.group(1).strip()
+
+            if re.match(r"^\d+\.\s+", text):
+                current_section = text
+
+            continue
+
+        table = block
         rows = []
 
         for row in table.rows:
@@ -107,8 +139,12 @@ def extract_docx_tables(file_path: Path) -> list[dict]:
             "table_id": f"{file_path.stem}_table_{table_index}",
             "source_file": file_path.name,
             "source_type": "docx",
+            "document_section": current_document_section,
+            "project_id": current_project,
+            "section_title": current_section,
             "rows": rows
         })
+        table_index += 1
 
     return tables
 

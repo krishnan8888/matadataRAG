@@ -1,0 +1,275 @@
+@page "/"
+@rendermode InteractiveServer
+@inject IRagApiClient RagApi
+
+<PageTitle>Knowledge Workspace</PageTitle>
+
+<header class="topbar">
+    <div>
+        <p class="eyebrow">Metadata-first RAG</p>
+        <h1>Knowledge workspace</h1>
+    </div>
+    <div class="health @(BackendOnline ? "online" : "offline")">
+        <span class="status-dot"></span>
+        <span>@HealthLabel</span>
+    </div>
+</header>
+
+<main class="workspace">
+    <aside class="sidebar">
+        <section class="upload-section">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Ingestion</p>
+                    <h2>Add documents</h2>
+                </div>
+            </div>
+
+            <label class="drop-zone">
+                <InputFile OnChange="UploadFilesAsync" multiple accept=".txt,.md,.pdf,.docx,.xlsx,.csv,.py,.js,.ts,.java,.json,.yaml,.yml,.xml,.html,.css,.log" />
+                <strong>Choose files</strong>
+                <span>to ingest them</span>
+                <small>PDF, DOCX, XLSX, CSV, text and code files</small>
+            </label>
+
+            <div class="upload-list" aria-live="polite">
+                @foreach (var upload in Uploads)
+                {
+                    <div class="upload-item">
+                        <span>@upload.Filename</span>
+                        <span class="@(upload.IsError ? "error" : upload.Status.StartsWith("Ready") ? "success" : "")">
+                            @upload.Status
+                        </span>
+                    </div>
+                }
+            </div>
+        </section>
+
+        <section class="documents-section">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Library</p>
+                    <h2>Documents</h2>
+                </div>
+                <button class="icon-button" type="button" title="Refresh documents" aria-label="Refresh documents"
+                        @onclick="LoadDocumentsAsync" disabled="@LoadingDocuments">↻</button>
+            </div>
+            <div class="document-list" aria-live="polite">
+                @if (LoadingDocuments)
+                {
+                    <div class="document-item"><p>Loading documents...</p></div>
+                }
+                else if (Documents.Count == 0)
+                {
+                    <div class="document-item"><p>No ingested documents yet.</p></div>
+                }
+                else
+                {
+                    @foreach (var document in Documents)
+                    {
+                        <article class="document-item">
+                            <strong>@document.DocumentId</strong>
+                            <p>@(document.DocumentType is { Length: > 0 } ? document.DocumentType : "Unknown type") · @(document.EmbeddingMode is { Length: > 0 } ? document.EmbeddingMode : "No embedding mode")</p>
+                            <div class="tag-row">
+                                @foreach (var mode in document.RetrievalModes)
+                                {
+                                    <span class="tag">@mode</span>
+                                }
+                            </div>
+                        </article>
+                    }
+                }
+            </div>
+        </section>
+    </aside>
+
+    <section class="query-workspace">
+        <div class="query-header">
+            <p class="eyebrow">Ask your documents</p>
+            <h2>Retrieval and grounded answer</h2>
+        </div>
+
+        <form class="query-form" @onsubmit="AskAsync" @onsubmit:preventDefault>
+            <label for="query-input">Question</label>
+            <div class="query-row">
+                <textarea id="query-input" rows="3" placeholder="What changed in Project Nebula?"
+                          @bind="QueryText" @bind:event="oninput" disabled="@Asking"></textarea>
+                <button class="primary-button" type="submit" disabled="@(Asking || string.IsNullOrWhiteSpace(QueryText))">
+                    @(Asking ? "Working" : "Ask")
+                </button>
+            </div>
+        </form>
+
+        @if (QueryResult is null)
+        {
+            <div class="answer-state @(Asking ? "loading" : QueryError is not null ? "error" : "")">
+                <p>@(Asking ? "Retrieving evidence and generating a grounded answer..." : QueryError ?? "Ask a question to see the grounded answer and retrieved evidence.")</p>
+            </div>
+        }
+        else
+        {
+            <section class="answer-section">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">Answer</p>
+                        <h2>Response</h2>
+                    </div>
+                </div>
+                <div class="answer-text">@QueryResult.Answer</div>
+            </section>
+
+            <section class="evidence-section">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">Evidence</p>
+                        <h2>Retrieved context</h2>
+                    </div>
+                    <button class="text-button" type="button" @onclick="() => ShowEvidence = !ShowEvidence">
+                        @(ShowEvidence ? "Hide evidence" : "Show evidence")
+                    </button>
+                </div>
+
+                @if (ShowEvidence)
+                {
+                    <div class="chosen-documents">
+                        @if (QueryResult.ChosenDocuments.Count == 0)
+                        {
+                            <span class="chosen-document">No documents selected</span>
+                        }
+                        else
+                        {
+                            @foreach (var document in QueryResult.ChosenDocuments)
+                            {
+                                <span class="chosen-document">@document.DocumentId · score @document.MetadataScore.ToString("0.0")</span>
+                            }
+                        }
+                    </div>
+
+                    <div class="evidence-list">
+                        @if (QueryResult.Results.Count == 0)
+                        {
+                            <article class="evidence-item"><p>No evidence retrieved.</p></article>
+                        }
+                        else
+                        {
+                            @foreach (var result in QueryResult.Results)
+                            {
+                                <article class="evidence-item">
+                                    <header>
+                                        <strong>@result.DocumentId</strong>
+                                        <span>@result.Source · score @((result.Score ?? 0).ToString("0.000"))</span>
+                                    </header>
+                                    <p>@result.Content</p>
+                                </article>
+                            }
+                        }
+                    </div>
+                }
+            </section>
+        }
+    </section>
+</main>
+
+@code {
+    private List<DocumentProfile> Documents { get; set; } = [];
+    private List<UploadStatus> Uploads { get; set; } = [];
+    private string QueryText { get; set; } = "";
+    private QueryResponse? QueryResult { get; set; }
+    private string? QueryError { get; set; }
+    private bool BackendOnline { get; set; }
+    private bool LoadingDocuments { get; set; } = true;
+    private bool Asking { get; set; }
+    private bool ShowEvidence { get; set; } = true;
+    private string HealthLabel { get; set; } = "Connecting";
+
+    protected override async Task OnInitializedAsync() => await LoadDocumentsAsync();
+
+    private async Task CheckHealthAsync()
+    {
+        try
+        {
+            var health = await RagApi.GetHealthAsync();
+            BackendOnline = true;
+            HealthLabel = $"{health.Documents} documents ready";
+        }
+        catch
+        {
+            BackendOnline = false;
+            HealthLabel = "Backend unavailable";
+        }
+    }
+
+    private async Task LoadDocumentsAsync()
+    {
+        LoadingDocuments = true;
+        try
+        {
+            Documents = (await RagApi.GetDocumentsAsync()).ToList();
+        }
+        catch
+        {
+            Documents = [];
+        }
+        finally
+        {
+            LoadingDocuments = false;
+            await CheckHealthAsync();
+        }
+    }
+
+    private async Task UploadFilesAsync(InputFileChangeEventArgs eventArgs)
+    {
+        foreach (var file in eventArgs.GetMultipleFiles(20))
+        {
+            var status = new UploadStatus(file.Name, "Ingesting");
+            Uploads.Insert(0, status);
+
+            try
+            {
+                var result = await RagApi.IngestAsync(file);
+                ReplaceUpload(status, new(file.Name, $"Ready · {result.EmbeddingMode}"));
+            }
+            catch (Exception ex)
+            {
+                ReplaceUpload(status, new(file.Name, ex.Message, true));
+            }
+        }
+
+        await LoadDocumentsAsync();
+    }
+
+    private void ReplaceUpload(UploadStatus previous, UploadStatus updated)
+    {
+        var index = Uploads.IndexOf(previous);
+        if (index >= 0)
+        {
+            Uploads[index] = updated;
+        }
+    }
+
+    private async Task AskAsync()
+    {
+        if (Asking || string.IsNullOrWhiteSpace(QueryText))
+        {
+            return;
+        }
+
+        Asking = true;
+        QueryError = null;
+        QueryResult = null;
+
+        try
+        {
+            QueryResult = await RagApi.QueryAsync(QueryText.Trim());
+            ShowEvidence = true;
+        }
+        catch (Exception ex)
+        {
+            QueryError = ex.Message;
+        }
+        finally
+        {
+            Asking = false;
+        }
+    }
+}

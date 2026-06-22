@@ -10,9 +10,17 @@ __pycache__/
 .venv/
 venv/
 env/
+.dotnet-cli-home/
+
+# .NET build output
+**/bin/
+**/obj/
 
 # Runtime logs
 *.log
+DockerDesktopInstaller.exe
+.docker-cli/
+docker-*.txt
 
 # Uploaded source documents and generated ingestion stores
 app/data/

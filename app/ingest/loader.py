@@ -44,22 +44,21 @@ def load_pdf(path: str) -> str:
 
 def load_docx(path: str) -> str:
     document = Document(path)
-
     parts = []
 
-    for paragraph in document.paragraphs:
-        if paragraph.text.strip():
-            parts.append(paragraph.text)
+    for block in document.iter_inner_content():
+        if hasattr(block, "rows"):
+            for row in block.rows:
+                cells = [
+                    cell.text.strip()
+                    for cell in row.cells
+                ]
 
-    for table in document.tables:
-        for row in table.rows:
-            cells = [
-                cell.text.strip()
-                for cell in row.cells
-            ]
+                if any(cells):
+                    parts.append(" | ".join(cells))
 
-            if any(cells):
-                parts.append(" | ".join(cells))
+        elif block.text.strip():
+            parts.append(block.text)
 
     return "\n".join(parts)
 

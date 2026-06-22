@@ -2,6 +2,7 @@ chromadb
 fastapi
 langchain-community
 langchain-core
+langchain-ollama
 langchain-text-splitters
 openpyxl
 PyMuPDF
