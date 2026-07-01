@@ -18,6 +18,7 @@ from app.ingest.stores import (
     store_structured_json,
     store_tables,
 )
+from app.table_rows import build_table_row_records
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -46,11 +47,33 @@ def store_non_vector_targets(
 ) -> None:
     storage_targets = get_storage_targets(metadata)
 
+    from app.ingest.vectordb import delete_table_row_vectors
+
+    delete_table_row_vectors(document_id)
+
     if "table_store" in storage_targets:
         table_path = store_tables(document_id, file_path)
 
         if table_path:
             print(f"Table store saved to: {table_path}")
+
+            with open(table_path, "r", encoding="utf-8") as f:
+                table_payload = json.load(f)
+
+            table_rows = build_table_row_records(table_payload)
+
+            if table_rows:
+                from app.ingest.embedder import generate_embeddings
+                from app.ingest.vectordb import store_table_rows
+
+                row_embeddings = generate_embeddings([
+                    row["content"]
+                    for row in table_rows
+                ])
+                store_table_rows(document_id, table_rows, row_embeddings)
+                print(
+                    f"Persisted {len(table_rows)} table-row embeddings."
+                )
         else:
             print("Table store selected, but no extractable tables were found.")
 

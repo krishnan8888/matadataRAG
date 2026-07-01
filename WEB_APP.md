@@ -6,6 +6,16 @@ retrieval, and answer generation.
 
 ## Run locally
 
+Start both services in one terminal:
+
+```powershell
+.\run_app.ps1
+```
+
+Open `http://127.0.0.1:5050`.
+
+Alternatively, start each service separately.
+
 Start the Python RAG API:
 
 ```powershell
@@ -17,8 +27,6 @@ Start the .NET frontend in a second terminal:
 ```powershell
 .\run_dotnet.ps1
 ```
-
-Open `http://127.0.0.1:5050`.
 
 ## Integration boundary
 
@@ -56,15 +64,22 @@ docker run --rm -p 8000:8000 `
   current local placeholder is `OLLAMA_BASE_URL`; it can be replaced by a
   production model adapter later, such as an OpenAI-backed adapter.
 - Configure `OLLAMA_BASE_URL`, `METADATA_MODEL`, `ANSWER_MODEL`, and
-  `EMBEDDING_MODEL` through environment variables.
+  `EMBEDDING_MODEL` through environment variables. `OLLAMA_KEEP_ALIVE`
+  controls how long the local answer model remains loaded and defaults to
+  `30m`.
 - Persist the `app/data`, `app/metadata`, `app/tables`, `app/dataframes`, and
   `app/vectordb` directories.
 - Set `CORS_ORIGINS` only when hosting the frontend separately from the API.
 - The local model operations are serialized to prevent concurrent requests from
   competing for model resources.
+- The local UI Exit button unloads the configured Ollama models and stops both
+  application processes. It is enabled automatically only when Ollama uses a
+  loopback URL; set `LOCAL_SHUTDOWN_ENABLED=false` explicitly in production.
 
-## Performance follow-up
+## Table retrieval performance
 
-- Table-row embeddings are currently generated at query time for semantic table
-  retrieval. When optimizing latency, generate and persist these embeddings
-  during ingestion, then query the stored row vectors instead.
+- Table-row embeddings are generated during ingestion and persisted in a
+  dedicated Chroma collection. Queries embed only the question and reuse the
+  stored row vectors. Existing table stores are backfilled once on first use.
+- Existing deployments can prefill all saved table stores with
+  `python backfill_table_embeddings.py`.

@@ -7,6 +7,10 @@ public sealed record HealthResponse(
     [property: JsonPropertyName("status")] string Status,
     [property: JsonPropertyName("documents")] int Documents);
 
+public sealed record ShutdownResponse(
+    [property: JsonPropertyName("status")] string Status,
+    [property: JsonPropertyName("unloaded_models")] IReadOnlyList<string> UnloadedModels);
+
 public sealed record DocumentsResponse(
     [property: JsonPropertyName("documents")] IReadOnlyList<DocumentProfile> Documents);
 

@@ -11,6 +11,7 @@ __pycache__/
 venv/
 env/
 .dotnet-cli-home/
+web-dotnet/.data-protection/
 
 # .NET build output
 **/bin/

@@ -16,6 +16,13 @@ from app.retrieval.answer_generator import generate_answer
 from app.retrieval.context_builder import build_context
 from app.retrieval.metadata_retriever import list_metadata_profiles
 from app.retrieval.router import route_query
+from app.settings import (
+    ANSWER_MODEL,
+    LOCAL_SHUTDOWN_ENABLED,
+    METADATA_MODEL,
+    OLLAMA_BASE_URL,
+)
+from app.web.shutdown import schedule_process_exit, unload_ollama_models
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -101,6 +108,7 @@ def query_and_answer(request: QueryRequest) -> dict:
     answer_context = build_context(
         response["results"],
         include_debug_metadata=False,
+        deduplicate=True,
     )
     answer = generate_answer(request.query, answer_context)
 
@@ -203,6 +211,35 @@ async def query(request: QueryRequest) -> dict:
             status_code=500,
             detail=f"Query failed: {exc}",
         ) from exc
+
+
+@app.post("/api/shutdown")
+async def shutdown() -> dict:
+    if not LOCAL_SHUTDOWN_ENABLED:
+        raise HTTPException(
+            status_code=404,
+            detail="Local shutdown is disabled.",
+        )
+
+    try:
+        async with MODEL_LOCK:
+            unloaded_models = await run_in_threadpool(
+                unload_ollama_models,
+                OLLAMA_BASE_URL,
+                [METADATA_MODEL, ANSWER_MODEL],
+            )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Could not unload Ollama models: {exc}",
+        ) from exc
+
+    schedule_process_exit()
+
+    return {
+        "status": "shutting_down",
+        "unloaded_models": unloaded_models,
+    }
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")

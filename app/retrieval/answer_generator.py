@@ -1,7 +1,7 @@
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import ChatOllama
 
-from app.settings import ANSWER_MODEL, OLLAMA_BASE_URL
+from app.settings import ANSWER_MODEL, OLLAMA_BASE_URL, OLLAMA_KEEP_ALIVE
 
 ANSWER_PROMPT = ChatPromptTemplate.from_template(
     """
@@ -26,6 +26,14 @@ Answer:
 """
 )
 
+answer_llm = ChatOllama(
+    model=ANSWER_MODEL,
+    temperature=0,
+    base_url=OLLAMA_BASE_URL,
+    keep_alive=OLLAMA_KEEP_ALIVE,
+)
+answer_chain = ANSWER_PROMPT | answer_llm
+
 
 def generate_answer(query: str, context: str) -> str:
     if not context.strip():
@@ -34,13 +42,7 @@ def generate_answer(query: str, context: str) -> str:
             "to answer this question."
         )
 
-    llm = ChatOllama(
-        model=ANSWER_MODEL,
-        temperature=0,
-        base_url=OLLAMA_BASE_URL,
-    )
-    chain = ANSWER_PROMPT | llm
-    response = chain.invoke({
+    response = answer_chain.invoke({
         "query": query,
         "context": context
     })

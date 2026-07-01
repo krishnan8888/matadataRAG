@@ -3,11 +3,19 @@ from app.retrieval.types import RetrievalResult
 
 def build_context(
     results: list[RetrievalResult],
-    include_debug_metadata: bool = True
+    include_debug_metadata: bool = True,
+    deduplicate: bool = False,
 ) -> str:
     context_blocks = []
+    seen_content = set()
 
     for result in results:
+        content_key = " ".join(result.content.split()).casefold()
+
+        if deduplicate and content_key in seen_content:
+            continue
+
+        seen_content.add(content_key)
         score = ""
         metadata = ""
 

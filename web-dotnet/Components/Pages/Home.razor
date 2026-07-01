@@ -1,6 +1,8 @@
 @page "/"
 @rendermode InteractiveServer
 @inject IRagApiClient RagApi
+@inject IHostApplicationLifetime AppLifetime
+@inject IJSRuntime JS
 
 <PageTitle>Knowledge Workspace</PageTitle>
 
@@ -9,9 +11,15 @@
         <p class="eyebrow">Metadata-first RAG</p>
         <h1>Knowledge workspace</h1>
     </div>
-    <div class="health @(BackendOnline ? "online" : "offline")">
-        <span class="status-dot"></span>
-        <span>@HealthLabel</span>
+    <div class="topbar-actions">
+        <div class="health @(BackendOnline ? "online" : "offline")">
+            <span class="status-dot"></span>
+            <span>@HealthLabel</span>
+        </div>
+        <button class="shutdown-button" type="button" title="Exit and unload local models"
+                @onclick="ShutdownAsync" disabled="@ShuttingDown">
+            @(ShuttingDown ? "Stopping" : "Exit")
+        </button>
     </div>
 </header>
 
@@ -179,6 +187,7 @@
     private bool BackendOnline { get; set; }
     private bool LoadingDocuments { get; set; } = true;
     private bool Asking { get; set; }
+    private bool ShuttingDown { get; set; }
     private bool ShowEvidence { get; set; } = true;
     private string HealthLabel { get; set; } = "Connecting";
 
@@ -270,6 +279,37 @@
         finally
         {
             Asking = false;
+        }
+    }
+
+    private async Task ShutdownAsync()
+    {
+        var confirmed = await JS.InvokeAsync<bool>(
+            "confirm",
+            "Exit the local RAG app and unload its Ollama models?"
+        );
+
+        if (!confirmed)
+        {
+            return;
+        }
+
+        ShuttingDown = true;
+        HealthLabel = "Unloading models";
+
+        try
+        {
+            await RagApi.ShutdownAsync();
+            HealthLabel = "Stopped";
+            await InvokeAsync(StateHasChanged);
+            await Task.Delay(350);
+            AppLifetime.StopApplication();
+        }
+        catch (Exception ex)
+        {
+            ShuttingDown = false;
+            BackendOnline = false;
+            HealthLabel = $"Shutdown failed: {ex.Message}";
         }
     }
 }

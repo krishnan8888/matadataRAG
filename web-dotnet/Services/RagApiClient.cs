@@ -11,6 +11,7 @@ public interface IRagApiClient
     Task<IReadOnlyList<DocumentProfile>> GetDocumentsAsync(CancellationToken cancellationToken = default);
     Task<IngestResponse> IngestAsync(IBrowserFile file, CancellationToken cancellationToken = default);
     Task<QueryResponse> QueryAsync(string query, CancellationToken cancellationToken = default);
+    Task<ShutdownResponse> ShutdownAsync(CancellationToken cancellationToken = default);
 }
 
 public sealed class RagApiClient(HttpClient httpClient) : IRagApiClient
@@ -52,6 +53,16 @@ public sealed class RagApiClient(HttpClient httpClient) : IRagApiClient
             JsonOptions,
             cancellationToken);
         return await ReadResponseAsync<QueryResponse>(response, cancellationToken);
+    }
+
+    public async Task<ShutdownResponse> ShutdownAsync(
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PostAsync(
+            "api/shutdown",
+            content: null,
+            cancellationToken);
+        return await ReadResponseAsync<ShutdownResponse>(response, cancellationToken);
     }
 
     private async Task<T> GetAsync<T>(string path, CancellationToken cancellationToken)

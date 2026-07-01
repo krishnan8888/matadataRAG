@@ -80,7 +80,8 @@ def main():
     context = build_context(response["results"])
     answer_context = build_context(
         response["results"],
-        include_debug_metadata=False
+        include_debug_metadata=False,
+        deduplicate=True,
     )
     answer = None
 

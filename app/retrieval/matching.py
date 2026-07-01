@@ -2,6 +2,8 @@ import re
 
 import numpy as np
 
+from app.table_rows import row_to_text
+
 
 STOP_WORDS = {
     "a",
@@ -39,19 +41,6 @@ def tokenize(text: str) -> set[str]:
         for token in re.findall(r"[a-zA-Z0-9_]+", text.lower())
         if len(token) >= 2 and token not in STOP_WORDS
     }
-
-
-def row_to_text(row) -> str:
-    if isinstance(row, dict):
-        return " | ".join(
-            f"{key}: {value}"
-            for key, value in row.items()
-        )
-
-    if isinstance(row, list):
-        return " | ".join(str(value) for value in row)
-
-    return str(row)
 
 
 def term_score(query: str, text: str) -> float:
@@ -119,9 +108,33 @@ def semantic_scores(query: str, texts: list[str]) -> list[float]:
     ]
 
 
+def cosine_scores(query_embedding, candidate_embeddings) -> list[float]:
+    candidates = np.asarray(candidate_embeddings, dtype=float)
+
+    if candidates.size == 0:
+        return []
+
+    query_vector = np.asarray(query_embedding, dtype=float).reshape(-1)
+    query_norm = np.linalg.norm(query_vector)
+    candidate_norms = np.linalg.norm(candidates, axis=1)
+    denominators = candidate_norms * query_norm
+    similarities = np.divide(
+        candidates @ query_vector,
+        denominators,
+        out=np.zeros(len(candidates), dtype=float),
+        where=denominators != 0,
+    )
+
+    return [
+        max(0.0, min(1.0, float(score)))
+        for score in similarities
+    ]
+
+
 def hybrid_scores(
     query: str,
     texts: list[str],
+    precomputed_semantic_scores: list[float] | None = None,
 ) -> list[float]:
     query_has_identifier = exact_identifier_score(query, query) > 0
     lexical_weight = 0.45 if query_has_identifier else 0.55
@@ -129,7 +142,14 @@ def hybrid_scores(
     semantic_weight = 1.0 - lexical_weight - identifier_weight
     lexical = [term_score(query, text) for text in texts]
     identifiers = [exact_identifier_score(query, text) for text in texts]
-    semantic = semantic_scores(query, texts)
+    semantic = (
+        precomputed_semantic_scores
+        if precomputed_semantic_scores is not None
+        else semantic_scores(query, texts)
+    )
+
+    if len(semantic) != len(texts):
+        raise ValueError("Semantic score count must match text count.")
 
     return [
         lexical_weight * lexical_score

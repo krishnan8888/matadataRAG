@@ -1,7 +1,16 @@
 using MetadataRag.Web.Components;
 using MetadataRag.Web.Services;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+
+var keyDirectory = Path.Combine(builder.Environment.ContentRootPath, ".data-protection");
+builder.Services.AddDataProtection()
+    .SetApplicationName("MetadataRag.Web")
+    .PersistKeysToFileSystem(new DirectoryInfo(keyDirectory));
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
