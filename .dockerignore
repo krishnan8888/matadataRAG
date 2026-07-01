@@ -17,8 +17,11 @@ env/
 .dotnet-sdk/
 web-dotnet/bin/
 web-dotnet/obj/
+web-dotnet/.data-protection/
 
 *.log
+docker-*.txt
+DockerDesktopInstaller.exe
 
 app/data/
 app/dataframes/
@@ -31,3 +34,4 @@ app/vectordb/
 
 progress report/
 frontend-*.png
+tests/

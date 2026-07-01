@@ -38,6 +38,24 @@ Start the .NET frontend in a second terminal:
 
 ## Deployment notes
 
+### Local Docker Compose
+
+Docker Desktop must be running, and the host Ollama service must listen on port
+`11434`. Build and start both application services with:
+
+```powershell
+docker compose up --build
+```
+
+Open `http://127.0.0.1:5050`. The API and Swagger remain available at
+`http://127.0.0.1:8000` and `http://127.0.0.1:8000/docs`.
+
+The Compose stack uses the existing host Ollama installation through
+`host.docker.internal`; it does not download another Ollama model. Application
+data and the Blazor keyring are stored in named Docker volumes. For production,
+set `LOCAL_SHUTDOWN_ENABLED=false` and replace `OLLAMA_BASE_URL` with the chosen
+model-service endpoint.
+
 - Build the Python RAG API container from the repository root:
 
 ```powershell

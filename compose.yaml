@@ -1,0 +1,65 @@
+services:
+  api:
+    image: metadata-rag-api:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        EMBEDDING_MODEL: ${EMBEDDING_MODEL:-BAAI/bge-small-en-v1.5}
+    environment:
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-30m}
+      METADATA_MODEL: ${METADATA_MODEL:-qwen2.5-coder:7b}
+      ANSWER_MODEL: ${ANSWER_MODEL:-qwen2.5-coder:7b}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-BAAI/bge-small-en-v1.5}
+      LOCAL_SHUTDOWN_ENABLED: ${LOCAL_SHUTDOWN_ENABLED:-true}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8000:8000"
+    volumes:
+      - rag_data:/app/app/data
+      - rag_dataframes:/app/app/dataframes
+      - rag_keyword_index:/app/app/keyword_index
+      - rag_metadata:/app/app/metadata
+      - rag_raw_files:/app/app/raw_files
+      - rag_structured:/app/app/structured
+      - rag_tables:/app/app/tables
+      - rag_vectordb:/app/app/vectordb
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      start_period: 90s
+      retries: 6
+
+  web:
+    image: metadata-rag-web:local
+    build:
+      context: .
+      dockerfile: web-dotnet/Dockerfile
+    environment:
+      RagApi__BaseUrl: http://api:8000
+      DataProtection__KeyPath: /app/keys
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "5050:8080"
+    volumes:
+      - web_keys:/app/keys
+
+volumes:
+  rag_data:
+  rag_dataframes:
+  rag_keyword_index:
+  rag_metadata:
+  rag_raw_files:
+  rag_structured:
+  rag_tables:
+  rag_vectordb:
+  web_keys:

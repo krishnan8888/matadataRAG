@@ -7,7 +7,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
-var keyDirectory = Path.Combine(builder.Environment.ContentRootPath, ".data-protection");
+var keyDirectory = builder.Configuration["DataProtection:KeyPath"]
+    ?? Path.Combine(builder.Environment.ContentRootPath, ".data-protection");
 builder.Services.AddDataProtection()
     .SetApplicationName("MetadataRag.Web")
     .PersistKeysToFileSystem(new DirectoryInfo(keyDirectory));
